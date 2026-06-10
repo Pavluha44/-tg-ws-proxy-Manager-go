@@ -259,6 +259,8 @@ func (s *Server) connectTelegramThenCloudflareWS(ctx context.Context, clientAddr
                 s.debugf("[%s] cf-worker success: domain=%s", clientAddr, workerDomain)
                 return ws, nil
             }
+			s.stats.recordError("ws_worker_connect", err)
+			s.recordVerboseConnFailure(clientAddr, "ws_worker_connect", err)
             s.debugf("[%s] cf-worker failed: domain=%s err=%v", clientAddr, workerDomain, err)
             s.stats.incWSErrors()
             lastErr = err

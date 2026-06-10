@@ -410,9 +410,9 @@ func buildFrame(opcode byte, payload []byte, masked bool) ([]byte, error) {
 	}
 
 	out = append(header, mask...)
-	maskedPayload := append([]byte(nil), payload...)
-	applyMask(maskedPayload, mask)
-	out = append(out, maskedPayload...)
+	start := len(out)
+	out = append(out, payload...)
+	applyMask(out[start:], mask)
 	return out, nil
 }
 
@@ -421,13 +421,12 @@ func pumpTCPToWS(clientConn net.Conn, ws *Client, splitter *mtproto.Splitter) er
 	for {
 		n, err := clientConn.Read(buf)
 		if n > 0 {
-			chunk := append([]byte(nil), buf[:n]...)
 			if splitter == nil {
-				if err := ws.Send(chunk); err != nil {
+				if err := ws.Send(buf[:n]); err != nil {
 					return err
 				}
 			} else {
-				parts := splitter.Split(chunk)
+				parts := splitter.Split(buf[:n])
 				if len(parts) == 0 {
 					if err != nil {
 						return normalizeEOF(err)
@@ -473,7 +472,15 @@ func wsAcceptKey(key string) string {
 }
 
 func applyMask(payload []byte, mask []byte) {
-	for i := range payload {
+	// Обрабатываем по 8 байт за раз
+	key64 := uint64(mask[0]) | uint64(mask[1])<<8 | uint64(mask[2])<<16 | uint64(mask[3])<<24 |
+		uint64(mask[0])<<32 | uint64(mask[1])<<40 | uint64(mask[2])<<48 | uint64(mask[3])<<56
+	i := 0
+	for ; i+8 <= len(payload); i += 8 {
+		val := binary.LittleEndian.Uint64(payload[i:])
+		binary.LittleEndian.PutUint64(payload[i:], val^key64)
+	}
+	for ; i < len(payload); i++ {
 		payload[i] ^= mask[i%4]
 	}
 }
@@ -492,45 +499,16 @@ func min(a, b int) int {
 	return b
 }
 
-// DialWorker соединяется с Cloudflare Worker.
-// Worker ожидает путь: /apiws?dst=<dc-ip>&dc=<dc>&media=<0|1>
+
 func DialWorker(ctx context.Context, cfg config.Config, workerDomain string, targetIP string, dc int, isMedia bool) (*Client, error) {
     mediaInt := 0
     if isMedia {
         mediaInt = 1
     }
-    path := fmt.Sprintf("/apiws?dst=%s&dc=%d&media=%d", targetIP, dc, mediaInt)
-
-    ep := WSEndpoint{
+    cfg.ConnectWSPath = fmt.Sprintf("/apiws?dst=%s&dc=%d&media=%d", targetIP, dc, mediaInt)
+    return DialEndpoint(ctx, cfg, WSEndpoint{
         DialHost: workerDomain,
         TLSHost:  workerDomain,
         HTTPHost: workerDomain,
-    }
-
-    addr := net.JoinHostPort(ep.DialHost, "443")
-    dialer := &net.Dialer{Timeout: cfg.DialTimeout}
-    rawConn, err := dialer.DialContext(ctx, "tcp", addr)
-    if err != nil {
-        return nil, err
-    }
-
-    tlsConn := tls.Client(rawConn, &tls.Config{
-        ServerName: ep.TLSHost,
-        MinVersion: tls.VersionTLS12,
-        NextProtos: []string{"http/1.1"},
     })
-    releaseDeadline := bindConnToContext(ctx, tlsConn, cfg.DialTimeout)
-    defer releaseDeadline()
-
-    if err := tlsConn.Handshake(); err != nil {
-        _ = tlsConn.Close()
-        return nil, err
-    }
-
-    client := NewClient(tlsConn)
-    if err := client.handshake(ep.HTTPHost, path); err != nil {
-        _ = client.Close()
-        return nil, err
-    }
-    return client, nil
 }
