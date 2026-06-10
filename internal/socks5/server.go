@@ -232,6 +232,7 @@ func (s *Server) connectWS(ctx context.Context, targetIP string, dc int, isMedia
 
 func (s *Server) connectTelegramThenCloudflareWS(ctx context.Context, clientAddr string, dc int, effectiveDC int, isMedia bool, targetIP string, allowTelegramWS bool) (*wsbridge.Client, error) {
 	tryCloudflare := s.cfg.UseCFProxy && len(s.cfg.CFDomains) > 0
+	tryWorker := len(s.cfg.CFWorkerDomains) > 0
 	cfDomains := s.cfDomainsForConn()
 	var lastErr error
 
@@ -249,6 +250,21 @@ func (s *Server) connectTelegramThenCloudflareWS(ctx context.Context, clientAddr
 		s.recordCFEvent(clientAddr, effectiveDC, isMedia, nil)
 		return cfWS, nil
 	}
+
+	tryWorkerCF := func() (*wsbridge.Client, error) {
+        s.debugf("[%s] cf-worker websocket attempt: dc=%d media=%v", clientAddr, dc, isMedia)
+        for _, workerDomain := range s.cfg.CFWorkerDomains {
+            ws, err := wsbridge.dialWorker(ctx, s.cfg, workerDomain, targetIP, effectiveDC, isMedia)
+            if err == nil {
+                s.debugf("[%s] cf-worker success: domain=%s", clientAddr, workerDomain)
+                return ws, nil
+            }
+            s.debugf("[%s] cf-worker failed: domain=%s err=%v", clientAddr, workerDomain, err)
+            s.stats.incWSErrors()
+            lastErr = err
+        }
+        return nil, lastErr
+    }
 
 	tryTelegram := func() (*wsbridge.Client, error) {
 		ws, err := s.connectWS(ctx, targetIP, effectiveDC, isMedia)
@@ -274,6 +290,12 @@ func (s *Server) connectTelegramThenCloudflareWS(ctx context.Context, clientAddr
 			return ws, nil
 		}
 	}
+
+    if tryWorker {
+		if ws, err := tryWorkerCF(); err == nil {
+            return ws, nil
+        }
+    }
 
 	if tryCloudflare && !s.cfg.UseCFProxyFirst {
 		if cfWS, cfErr := tryBridgeCF(); cfErr == nil {
