@@ -494,7 +494,7 @@ func min(a, b int) int {
 
 // DialWorker соединяется с Cloudflare Worker.
 // Worker ожидает путь: /apiws?dst=<dc-ip>&dc=<dc>&media=<0|1>
-func dialWorker(ctx context.Context, cfg config.Config, workerDomain string, targetIP string, dc int, isMedia bool) (*Client, error) {
+func DialWorker(ctx context.Context, cfg config.Config, workerDomain string, targetIP string, dc int, isMedia bool) (*Client, error) {
     mediaInt := 0
     if isMedia {
         mediaInt = 1
