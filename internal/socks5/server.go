@@ -254,7 +254,7 @@ func (s *Server) connectTelegramThenCloudflareWS(ctx context.Context, clientAddr
 	tryWorkerCF := func() (*wsbridge.Client, error) {
         s.debugf("[%s] cf-worker websocket attempt: dc=%d media=%v", clientAddr, dc, isMedia)
         for _, workerDomain := range s.cfg.CFWorkerDomains {
-            ws, err := wsbridge.dialWorker(ctx, s.cfg, workerDomain, targetIP, effectiveDC, isMedia)
+            ws, err := wsbridge.DialWorker(ctx, s.cfg, workerDomain, targetIP, effectiveDC, isMedia)
             if err == nil {
                 s.debugf("[%s] cf-worker success: domain=%s", clientAddr, workerDomain)
                 return ws, nil
