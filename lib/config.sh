@@ -124,6 +124,7 @@ write_settings_config() {
         printf "CF_PROXY_FIRST='%s'\n" "$CF_PROXY_FIRST"
         printf "CF_BALANCE='%s'\n" "$CF_BALANCE"
         printf "CF_DOMAIN='%s'\n" "$CF_DOMAIN"
+        printf "CF_WORKER_DOMAIN='%s'\n" "$CF_WORKER_DOMAIN"
         printf "PROXY_MODE='%s'\n" "$PROXY_MODE"
         printf "MT_SECRET='%s'\n" "$MT_SECRET"
         printf "MT_LINK_IP='%s'\n" "$MT_LINK_IP"
