@@ -357,7 +357,9 @@ _run_proxy_cmd() {
             set -- "$@" --cf-balance
         fi
     fi
-
+    if [ -n "$CF_WORKER_DOMAIN" ]; then
+        set -- "$@" --cf-worker-domain "$CF_WORKER_DOMAIN"
+    fi
     if [ "$PROXY_MODE" = "mtproto" ] && [ -n "$MT_UPSTREAM_PROXIES" ]; then
         _rpc_old_ifs="$IFS"
         IFS=','
