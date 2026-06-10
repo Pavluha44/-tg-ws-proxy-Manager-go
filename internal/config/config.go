@@ -45,6 +45,7 @@ type Config struct {
 	CFDomain        string
 	CFDomains       []string
 	UpstreamProxies []UpstreamProxy
+	CFWorkerDomains []string
 }
 
 const (
