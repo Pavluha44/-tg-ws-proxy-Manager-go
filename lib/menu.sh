@@ -1710,6 +1710,43 @@ configure_mt_upstream_proxies() {
     done
 }
 
+configure_cf_worker_domain() {
+    show_header
+    printf "%sCF Worker domain%s\n" "$C_BOLD" "$C_RESET"
+    if [ -n "$CF_WORKER_DOMAIN" ]; then
+        printf "  current: %s%s%s\n" "$C_GREEN" "$CF_WORKER_DOMAIN" "$C_RESET"
+        printf "\n  1) change\n  2) clear\n  Enter) back\n\n"
+        printf "%sSelect:%s " "$C_CYAN" "$C_RESET"
+        IFS= read -r _cfw_action
+        case "$_cfw_action" in
+            2)
+                CF_WORKER_DOMAIN=""
+                write_settings_config || { pause; return; }
+                printf "\n%sCF Worker domain cleared%s\n" "$C_GREEN" "$C_RESET"
+                prompt_restart_proxy_for_updated_settings
+                pause
+                return
+                ;;
+            1) ;;
+            *) return ;;
+        esac
+    fi
+    printf "\nEnter CF Worker domain (e.g. abc123.username.workers.dev).\n"
+    printf "Worker domain: "
+    IFS= read -r _cfw_new
+    _cfw_new="$(printf "%s" "$_cfw_new" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    if [ -z "$_cfw_new" ]; then
+        printf "\n%sNo domain provided%s\n" "$C_RED" "$C_RESET"
+        pause
+        return
+    fi
+    CF_WORKER_DOMAIN="$_cfw_new"
+    write_settings_config || { pause; return; }
+    printf "\n%sCF Worker domain saved%s\n" "$C_GREEN" "$C_RESET"
+    prompt_restart_proxy_for_updated_settings
+    pause
+}
+
 advanced_menu() {
     while true; do
         show_header
@@ -1780,6 +1817,11 @@ advanced_menu() {
             printf " 21) Upstream proxies (%s%d set%s)\n" "$C_GREEN" "$_adv_up_count" "$C_RESET"
         else
             printf " 21) Upstream proxies (%snone%s)\n" "$C_DIM" "$C_RESET"
+        fi
+        if [ -n "$CF_WORKER_DOMAIN" ]; then
+            printf " 22) CF Worker domain (%s%s%s)\n" "$C_GREEN" "$CF_WORKER_DOMAIN" "$C_RESET"
+        else
+            printf " 22) CF Worker domain (%snot set%s)\n" "$C_DIM" "$C_RESET"
         fi
         printf "\n  Enter) Back\n\n"
         printf "%sSelect:%s " "$C_CYAN" "$C_RESET"
@@ -1861,6 +1903,9 @@ advanced_menu() {
             21)
                 configure_mt_upstream_proxies
                 ;;
+            22)
+                configure_cf_worker_domain
+                ;;    
             *)
                 return 0
                 ;;
