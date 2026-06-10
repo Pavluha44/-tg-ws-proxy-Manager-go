@@ -186,6 +186,8 @@ load_saved_settings() {
         CF_DOMAIN="$(read_config_value CF_DOMAIN 2>/dev/null || true)"
     fi
 
+    CF_WORKER_DOMAIN="$(read_config_value CF_WORKER_DOMAIN 2>/dev/null || true)"
+
     if [ -z "$PROXY_MODE_FROM_ENV" ]; then
         proxy_mode_value="$(read_config_value PROXY_MODE 2>/dev/null || true)"
         [ -n "$proxy_mode_value" ] && PROXY_MODE="$proxy_mode_value"
