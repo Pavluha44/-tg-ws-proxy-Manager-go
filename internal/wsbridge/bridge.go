@@ -491,3 +491,46 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// DialWorker соединяется с Cloudflare Worker.
+// Worker ожидает путь: /apiws?dst=<dc-ip>&dc=<dc>&media=<0|1>
+func dialWorker(ctx context.Context, cfg config.Config, workerDomain string, targetIP string, dc int, isMedia bool) (*Client, error) {
+    mediaInt := 0
+    if isMedia {
+        mediaInt = 1
+    }
+    path := fmt.Sprintf("/apiws?dst=%s&dc=%d&media=%d", targetIP, dc, mediaInt)
+
+    ep := WSEndpoint{
+        DialHost: workerDomain,
+        TLSHost:  workerDomain,
+        HTTPHost: workerDomain,
+    }
+
+    addr := net.JoinHostPort(ep.DialHost, "443")
+    dialer := &net.Dialer{Timeout: cfg.DialTimeout}
+    rawConn, err := dialer.DialContext(ctx, "tcp", addr)
+    if err != nil {
+        return nil, err
+    }
+
+    tlsConn := tls.Client(rawConn, &tls.Config{
+        ServerName: ep.TLSHost,
+        MinVersion: tls.VersionTLS12,
+        NextProtos: []string{"http/1.1"},
+    })
+    releaseDeadline := bindConnToContext(ctx, tlsConn, cfg.DialTimeout)
+    defer releaseDeadline()
+
+    if err := tlsConn.Handshake(); err != nil {
+        _ = tlsConn.Close()
+        return nil, err
+    }
+
+    client := NewClient(tlsConn)
+    if err := client.handshake(ep.HTTPHost, path); err != nil {
+        _ = client.Close()
+        return nil, err
+    }
+    return client, nil
+}
