@@ -101,6 +101,9 @@ func parseArgs(args []string) (parsedArgs, error) {
 	fs.StringVar(&linkIP, "link-ip", "", "public IP to include in the tg:// proxy link (mtproto mode)")
 	fs.Var(&mtProxies, "mtproto-proxy", "upstream MTProto proxy HOST:PORT:SECRET (may be repeated)")
 
+	var cfWorkerDomainFlag string
+	fs.StringVar(&cfWorkerDomainFlag, "cf-worker-domain", "", "Cloudflare Worker domain(s), e.g. abc.username.workers.dev (may repeat with commas)")
+
 	if err := fs.Parse(args); err != nil {
 		return parsedArgs{}, err
 	}
@@ -154,6 +157,20 @@ func parseArgs(args []string) (parsedArgs, error) {
 		if len(cfg.CFDomains) > 0 {
 			cfg.CFDomain = cfg.CFDomains[0]
 		}
+	}
+
+	if cfWorkerDomainFlag != "" {
+	    parts := strings.Split(cfWorkerDomainFlag, ",")
+	    for _, p := range parts {
+	        p = strings.TrimSpace(p)
+	        if p == "" {
+	            continue
+	        }
+	        if !isValidDomain(p) {
+	            return parsedArgs{}, fmt.Errorf("invalid --cf-worker-domain value: %q", p)
+	        }
+	        cfg.CFWorkerDomains = append(cfg.CFWorkerDomains, p)
+	    }
 	}
 
 	if mode != "socks5" && mode != "mtproto" {
