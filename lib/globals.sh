@@ -3,7 +3,7 @@
 
 APP_NAME="tg-ws-proxy"
 LAUNCHER_NAME="${LAUNCHER_NAME:-tgm}"
-REPO_OWNER="${REPO_OWNER:-d0mhate}"
+REPO_OWNER="${REPO_OWNER:-Pavluha44}"
 REPO_NAME="${REPO_NAME:--tg-ws-proxy-Manager-go}"
 DEFAULT_BINARY_NAME="${DEFAULT_BINARY_NAME:-tg-ws-proxy-openwrt}"
 BINARY_NAME="${BINARY_NAME:-}"
