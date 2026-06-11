@@ -380,3 +380,45 @@ func TestCurrentBinaryPathFallsBackToArgv0(t *testing.T) {
 		t.Fatalf("expected currentBinaryPath to return a non-empty path, got %q", got)
 	}
 }
+
+func TestParseArgsCFWorkerDomain(t *testing.T) {
+	pa, err := parseArgs([]string{"--cf-worker-domain", "abc123.username.workers.dev"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pa.cfg.CFWorkerDomains) != 1 || pa.cfg.CFWorkerDomains[0] != "abc123.username.workers.dev" {
+		t.Fatalf("expected CFWorkerDomains to be [%q], got %v", "abc123.username.workers.dev", pa.cfg.CFWorkerDomains)
+	}
+}
+
+func TestParseArgsCFWorkerDomainMultiple(t *testing.T) {
+	pa, err := parseArgs([]string{"--cf-worker-domain", "a.workers.dev,b.workers.dev"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got, want := pa.cfg.CFWorkerDomains, []string{"a.workers.dev", "b.workers.dev"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("unexpected CFWorkerDomains: got %v want %v", got, want)
+	}
+}
+
+func TestParseArgsCFWorkerDomainDefaultEmpty(t *testing.T) {
+	pa, err := parseArgs([]string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pa.cfg.CFWorkerDomains) != 0 {
+		t.Fatalf("expected empty CFWorkerDomains by default, got %v", pa.cfg.CFWorkerDomains)
+	}
+}
+
+func TestParseArgsCFWorkerDomainValidation(t *testing.T) {
+	invalid := []string{"not a domain", "has space.com", ""}
+	for _, d := range invalid {
+		if d == "" {
+			continue
+		}
+		if _, err := parseArgs([]string{"--cf-worker-domain", d}); err == nil {
+			t.Fatalf("expected error for invalid worker domain %q, got none", d)
+		}
+	}
+}

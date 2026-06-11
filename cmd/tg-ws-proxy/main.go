@@ -160,17 +160,17 @@ func parseArgs(args []string) (parsedArgs, error) {
 	}
 
 	if cfWorkerDomainFlag != "" {
-	    parts := strings.Split(cfWorkerDomainFlag, ",")
-	    for _, p := range parts {
-	        p = strings.TrimSpace(p)
-	        if p == "" {
-	            continue
-	        }
-	        if !isValidDomain(p) {
-	            return parsedArgs{}, fmt.Errorf("invalid --cf-worker-domain value: %q", p)
-	        }
-	        cfg.CFWorkerDomains = append(cfg.CFWorkerDomains, p)
-	    }
+		parts := strings.Split(cfWorkerDomainFlag, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			if !isValidDomain(p) {
+				return parsedArgs{}, fmt.Errorf("invalid --cf-worker-domain value: %q", p)
+			}
+			cfg.CFWorkerDomains = append(cfg.CFWorkerDomains, p)
+		}
 	}
 
 	if mode != "socks5" && mode != "mtproto" {
